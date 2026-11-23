@@ -15,7 +15,10 @@
   h1 { font-size: 20px; margin: 16px 0 8px; }
   p { font-size: 14px; line-height: 1.7; opacity: .85; margin: 8px 0; }
   ol { text-align: left; font-size: 14px; line-height: 1.8; padding-left: 1.4em; }
-  a.btn { display: block; margin: 20px 0 0; padding: 14px; border-radius: 14px; background: #d9fb63; color: #292352;
+  input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 0; font-size: 14px; }
+  #err { color: #ffb4a8; }
+  button.btn { width: 100%; border: 0; font-size: 16px; }
+  .btn { display: block; margin: 20px 0 0; padding: 14px; border-radius: 14px; background: #d9fb63; color: #292352;
     font-weight: 700; text-decoration: none; }
   [hidden] { display: none !important; }
 </style>
@@ -33,19 +36,34 @@
     </ol>
     <a class="btn" id="go" href="#">いま開く</a>
   </div>
-  <p id="none" hidden>行き先が設定されていません。受け取ったリンクから開き直してください。</p>
+  <form id="none" hidden>
+    <p>家計簿の URL を貼り付けてください（この端末の中だけに保存されます）。</p>
+    <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+    <p id="err" hidden>家計簿の URL ではないようです。Safari のアドレス欄からコピーし直してください。</p>
+    <button class="btn" type="submit">設定する</button>
+  </form>
 </main>
 <script>
 (function () {
   // 行き先は URL の # 以降で受け取り、この端末の中だけに覚える（このページ自体には書かない）
-  var OK = /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/;
+  var OK = /^https:\/\/script\.google\.com\/macros\/(u\/\d+\/)?s\/[A-Za-z0-9_-]+\/exec$/;
   var get = function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
   var set = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
   var hash = '';
   try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
   var saved = get('dest');
   var dest = OK.test(hash) ? hash : (OK.test(saved) ? saved : '');
-  if (!dest) { document.getElementById('none').hidden = false; return; }
+  if (!dest) {
+    var form = document.getElementById('none'); form.hidden = false;
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var v = document.getElementById('url').value.trim().split(/[?#]/)[0];
+      if (!OK.test(v)) { document.getElementById('err').hidden = false; return; }
+      set('dest', v); set('seen', '');
+      location.replace(location.pathname + '#' + encodeURIComponent(v)); location.reload();
+    });
+    return;
+  }
   var first = saved !== dest || !get('seen');
   set('dest', dest);
   if (first) { // 初回は追加の手順を見せる（すぐ移動するとホーム画面に追加できない）
