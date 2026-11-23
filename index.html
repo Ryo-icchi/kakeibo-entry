@@ -27,52 +27,60 @@
 <main>
   <img src="apple-touch-icon.png" alt="">
   <h1>ふたりの家計簿</h1>
-  <div id="setup" hidden>
-    <p>このページをホーム画面に追加すると、次からはアイコンから直接ひらけます。</p>
-    <ol>
-      <li>下の共有ボタン →「ホーム画面に追加」</li>
-      <li>「Webアプリとして開く」をオフにする</li>
-      <li>「追加」を押す</li>
-    </ol>
-    <a class="btn" id="go" href="#">いま開く</a>
-  </div>
-  <form id="none" hidden>
+  <form id="form" hidden>
     <p>家計簿の URL を貼り付けてください（この端末の中だけに保存されます）。</p>
     <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
     <p id="err" hidden>家計簿の URL ではないようです。Safari のアドレス欄からコピーし直してください。</p>
     <button class="btn" type="submit">設定する</button>
   </form>
+  <div id="guide" hidden>
+    <p><b>いま表示しているこのページ</b>を、ホーム画面に追加してください。</p>
+    <ol>
+      <li>共有ボタン →「ホーム画面に追加」</li>
+      <li>アイコンがこの絵になっているのを確かめる</li>
+      <li>「Webアプリとして開く」をオフにして「追加」</li>
+      <li>このページに戻って、下のボタンを押す</li>
+    </ol>
+    <button class="btn" id="added" type="button">追加できた</button>
+    <p><a id="skip" href="#" style="color:#d9fb63">追加せずに家計簿を開く</a></p>
+  </div>
+  <div id="done" hidden>
+    <p>設定が終わりました。このタブは閉じて、ホーム画面のアイコンから開いてください。</p>
+  </div>
 </main>
 <script>
 (function () {
-  // 行き先は URL の # 以降で受け取り、この端末の中だけに覚える（このページ自体には書かない）
+  // このページの役目: ホーム画面のアイコンを出すことと、家計簿へ移動すること。
+  // 行き先は端末の中（と URL の # 以降）だけに持ち、このページ自体には書かない。
+  // ?open が付いていないとき（設定用）は、決して自動で移動しない。
   var OK = /^https:\/\/script\.google\.com\/macros\/(u\/\d+\/)?s\/[A-Za-z0-9_-]+\/exec$/;
   var get = function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
   var set = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+  var $ = function (id) { return document.getElementById(id); };
   var hash = '';
   try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
-  var saved = get('dest');
-  var dest = OK.test(hash) ? hash : (OK.test(saved) ? saved : '');
-  if (!dest) {
-    var form = document.getElementById('none'); form.hidden = false;
-    form.addEventListener('submit', function (e) {
+  var dest = OK.test(hash) ? hash : (OK.test(get('dest')) ? get('dest') : '');
+  var open = /[?&]open\b/.test(location.search);
+  var launchUrl = function (d) { return location.pathname + '?open#' + encodeURIComponent(d); };
+
+  if (!dest) { // 行き先をまだ知らない: 貼り付けてもらう
+    $('form').hidden = false;
+    $('form').addEventListener('submit', function (e) {
       e.preventDefault();
-      var v = document.getElementById('url').value.trim().split(/[?#]/)[0];
-      if (!OK.test(v)) { document.getElementById('err').hidden = false; return; }
-      set('dest', v); set('seen', '');
-      location.replace(location.pathname + '#' + encodeURIComponent(v)); location.reload();
+      var v = $('url').value.trim().split(/[?#]/)[0];
+      if (!OK.test(v)) { $('err').hidden = false; return; }
+      set('dest', v); set('added', '');
+      location.href = launchUrl(v); if (open) location.reload();
     });
     return;
   }
-  var first = saved !== dest || !get('seen');
   set('dest', dest);
-  if (first) { // 初回は追加の手順を見せる（すぐ移動するとホーム画面に追加できない）
-    set('seen', '1');
-    document.getElementById('go').href = dest;
-    document.getElementById('setup').hidden = false;
-    return;
-  }
-  location.replace(dest);
+  if (!open) { set('added', ''); location.replace(launchUrl(dest)); return; } // 設定用で開いたら、追加の案内からやり直す（家計簿へは移動しない）
+  // ホーム画面から開いたとき: Web アプリとして開いた場合（standalone）か、追加が済んだ端末なら移動する
+  if (navigator.standalone === true || get('added') === '1') { location.replace(dest); return; }
+  $('guide').hidden = false;
+  $('skip').href = dest;
+  $('added').addEventListener('click', function () { set('added', '1'); $('guide').hidden = true; $('done').hidden = false; });
 })();
 </script>
 </body>
