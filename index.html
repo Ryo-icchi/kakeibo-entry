@@ -20,7 +20,7 @@
     }
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); max-width: 100%; overflow-x: hidden; -webkit-text-size-adjust: 100%; }
   body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; line-height: 1.5; padding-bottom: 84px; }
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 16px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
   .month { display: flex; align-items: center; gap: 4px; flex: 1; font-weight: 700; font-size: 17px; }
@@ -53,13 +53,17 @@
   nav button.on { color: var(--accent); font-weight: 700; }
   label.f { display: block; margin-bottom: 12px; }
   label.f > span { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
-  input, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 46px; }
-  .two { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
+  input, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 46px; min-width: 0; max-width: 100%; font-size: 16px; }
+  /* iPhone: 日付欄は既定の幅が広く画面からはみ出す。入力欄の文字が16px未満だとタップ時に画面が拡大されたままになる */
+  input[type=date] { -webkit-appearance: none; appearance: none; display: block; text-align: left; }
+  input[type=date]::-webkit-date-and-time-value { text-align: left; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr) 110px; gap: 10px; }
+  .two > * { min-width: 0; }
   .btn { width: 100%; border: 0; border-radius: 12px; padding: 14px; font-weight: 700; background: var(--accent); color: #fff; font-size: 16px; }
   .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
   .btn.danger { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
   .btn:disabled { opacity: .5; }
-  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .btns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; margin-bottom: 14px; }
   .tx { display: flex; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); align-items: center; width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
   .tx:first-of-type { border-top: 0; }
   .tx .l { flex: 1; min-width: 0; }
@@ -71,7 +75,7 @@
   .rc + .tx { border-top: 0; }
   button.cat { display: block; width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
   .back { border: 0; background: transparent; color: var(--accent); font-weight: 700; padding: 0 0 12px; }
-  .brow { display: grid; grid-template-columns: 1fr 130px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .brow { display: grid; grid-template-columns: minmax(0, 1fr) 130px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
   .brow button { border: 0; background: transparent; color: var(--sub); font-size: 18px; }
   .note { font-size: 12px; color: var(--sub); margin: 8px 0 0; }
   #toast { position: fixed; left: 16px; right: 16px; bottom: 96px; z-index: 9; background: var(--ink); color: var(--bg); padding: 12px 14px; border-radius: 12px; font-size: 14px; display: none; text-align: center; }
