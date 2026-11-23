@@ -44,7 +44,7 @@
       </ol>
       <p class="step">② 家計簿に使う Google アカウントを選ぶ</p>
     </div>
-    <p id="backMsg" hidden><b>家計簿が開けませんでしたか？</b><br>別の番号を選び直してください。</p>
+    <p id="backMsg" hidden><b>家計簿が開けませんでしたか？</b><br>別の番号を選び直してください。開けていた場合は「いまの設定」を押してください。</p>
     <p>このブラウザで Google に複数のアカウントでログインしている場合、家計簿に使うアカウントが何番目かを選びます。わからなければ 1番目から試し、エラーの画面が出たら「戻る」でここに戻って次を試してください。</p>
     <div id="accts"></div>
   </div>
@@ -56,7 +56,8 @@
   // 行き先は端末の中（と URL の # 以降）だけに持ち、このページ自体には書かない。
   // 複数の Google アカウントにログインしている前提: 何番目のアカウントで開くか（/u/N/）を端末ごとに覚える。
   // 決まり: 行き先とアカウントの番号が決まっていれば、すぐ家計簿へ移動する。
-  //         移動しないのは ①番号をまだ選んでいない ②「戻る」で戻ってきた（＝開けなかった）③ ?setup で開いた とき。
+  //         移動しないのは ①番号をまだ選んでいない ②「戻る」で戻ってきた、または前に開いてから20秒以内にまた開いた
+  //         （＝開けなかったので開き直した、とみなして選び直しの画面を出す）③ ?setup で開いた とき。
   var RE = /^https:\/\/script\.google\.com\/macros\/(?:u\/(\d+)\/)?s\/([A-Za-z0-9_-]+)\/exec$/;
   var store = function (st) { return {
     get: function (k) { try { return st.getItem(k) || ''; } catch (e) { return ''; } },
@@ -76,7 +77,7 @@
   if (!okIdx(idx)) idx = (old && old.idx) || (fromHash && fromHash.id === id && fromHash.idx) || '';
 
   var go = function () {
-    T.set('setup', '');
+    T.set('setup', ''); L.set('lastGo', String(Date.now()));
     var dest = build(id, idx);
     $('form').hidden = true; $('setup').hidden = true; $('moving').hidden = false; $('manual').href = dest;
     location.href = dest; // 履歴に残す（開けなかったとき「戻る」でここに戻れるように）
@@ -114,7 +115,8 @@
   var cameBack = nav.type === 'back_forward';
   window.addEventListener('pageshow', function (e) { if (e.persisted) choose(true); }); // 「戻る」で戻ってきた＝開けなかった
   if (!okIdx(idx) || T.get('setup') === '1') { choose(false); return; }
-  if (cameBack) { choose(true); return; }
+  var since = Date.now() - (Number(L.get('lastGo')) || 0);
+  if (cameBack || (since >= 0 && since < 20000)) { choose(true); return; }
   go();
 })();
 </script>
