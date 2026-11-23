@@ -37,32 +37,44 @@
     <p><b>いま表示しているこのページ</b>を、ホーム画面に追加してください。</p>
     <ol>
       <li>共有ボタン →「ホーム画面に追加」</li>
-      <li>アイコンがこの絵になっているのを確かめる</li>
-      <li>「Webアプリとして開く」をオフにして「追加」</li>
-      <li>このページに戻って、下のボタンを押す</li>
+      <li>アイコンがこの絵になっているのを確かめて「追加」</li>
     </ol>
-    <button class="btn" id="added" type="button">追加できた</button>
-    <p><a id="skip" href="#" style="color:#d9fb63">追加せずに家計簿を開く</a></p>
+    <a class="btn" id="go" href="#">追加できた（家計簿を開く）</a>
   </div>
-  <div id="done" hidden>
-    <p>設定が終わりました。次からはホーム画面のアイコンで家計簿が開きます。</p>
-    <a class="btn" id="openNow" href="#">家計簿を開く</a>
-  </div>
+  <p id="moving" hidden>家計簿を開いています…<br><a id="manual" href="#" style="color:#d9fb63">開かないときはここを押す</a></p>
 </main>
 <script>
 (function () {
   // このページの役目: ホーム画面のアイコンを出すことと、家計簿へ移動すること。
   // 行き先は端末の中（と URL の # 以降）だけに持ち、このページ自体には書かない。
-  // ?open が付いていないとき（設定用）は、決して自動で移動しない。
+  // 決まり: 行き先を知っていれば、すぐ家計簿へ移動する。
+  //         移動しないのは「設定中のタブ」（行き先を入力した直後、または ?setup で開いたタブ）の10分間だけ。
+  //         URL の形（?open の有無・# の有無）や、端末に残した印には頼らない。
   var OK = /^https:\/\/script\.google\.com\/macros\/(u\/\d+\/)?s\/[A-Za-z0-9_-]+\/exec$/;
-  var get = function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
-  var set = function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} };
+  var store = function (st) { return {
+    get: function (k) { try { return st.getItem(k) || ''; } catch (e) { return ''; } },
+    set: function (k, v) { try { st.setItem(k, v); } catch (e) {} } }; };
+  var L = store(window.localStorage), T = store(window.sessionStorage);
   var $ = function (id) { return document.getElementById(id); };
   var hash = '';
   try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
-  var dest = OK.test(hash) ? hash : (OK.test(get('dest')) ? get('dest') : '');
-  var open = /[?&]open\b/.test(location.search);
-  var launchUrl = function (d) { return location.pathname + '?open#' + encodeURIComponent(d); };
+  var dest = OK.test(hash) ? hash : (OK.test(L.get('dest')) ? L.get('dest') : '');
+  var clean = function (d) { return location.pathname + '#' + encodeURIComponent(d); };
+  var inSetup = function () { var t = Number(T.get('setup')) || 0; return t > 0 && Date.now() - t < 10 * 60 * 1000; };
+  var go = function () {
+    T.set('setup', '');
+    $('form').hidden = true; $('guide').hidden = true; $('moving').hidden = false; $('manual').href = dest;
+    location.replace(dest);
+  };
+  var guide = function () {
+    $('form').hidden = true; $('guide').hidden = false; $('go').href = dest;
+    $('go').addEventListener('click', function (e) { e.preventDefault(); go(); });
+    // ホーム画面のアイコンを押すと、Safari が読み込み直さずにこのタブを前に出すだけのことがある。そのときも移動する
+    var away = false;
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'hidden') away = true; else if (away) go();
+    });
+  };
 
   if (!dest) { // 行き先をまだ知らない: 貼り付けてもらう
     $('form').hidden = false;
@@ -70,27 +82,20 @@
       e.preventDefault();
       var v = $('url').value.trim().split(/[?#]/)[0];
       if (!OK.test(v)) { $('err').hidden = false; return; }
-      set('dest', v); set('added', '');
-      location.href = launchUrl(v); if (open) location.reload();
+      dest = v; L.set('dest', v);
+      if (navigator.standalone === true) { go(); return; } // ホーム画面から Web アプリとして開いているなら、追加の案内は要らない
+      T.set('setup', String(Date.now()));
+      try { history.replaceState(null, '', clean(v)); } catch (err) {}
+      guide();
     });
     return;
   }
-  set('dest', dest);
-  if (!open) { set('added', ''); location.replace(launchUrl(dest)); return; } // 設定用で開いたら、追加の案内からやり直す（家計簿へは移動しない）
-  // ホーム画面から開いたとき: Web アプリとして開いた場合（standalone）か、追加が済んだ端末なら移動する
-  if (navigator.standalone === true || get('added') === '1') { location.replace(dest); return; }
-  // ホーム画面のアイコンを押すと、Safari が読み込み直さずにこのタブを前に出すだけのことがある。
-  // 追加が済んだあとでこのタブが再び表示されたら、そこで家計簿へ移動する
-  var away = false;
-  var back = function () { if (get('added') === '1') location.replace(dest); };
-  document.addEventListener('visibilitychange', function () {
-    if (document.visibilityState === 'hidden') away = true; else if (away) back();
-  });
-  window.addEventListener('pageshow', function (e) { if (e.persisted) back(); });
-  $('openNow').href = dest;
-  $('guide').hidden = false;
-  $('skip').href = dest;
-  $('added').addEventListener('click', function () { set('added', '1'); $('guide').hidden = true; $('done').hidden = false; });
+  L.set('dest', dest);
+  if (/[?&]setup\b/.test(location.search)) { // 追加をやり直したいとき用。きれいな URL に読み込み直してから案内を出す
+    T.set('setup', String(Date.now())); location.replace(clean(dest)); return;
+  }
+  if (inSetup() && navigator.standalone !== true) { guide(); return; }
+  go();
 })();
 </script>
 </body>
