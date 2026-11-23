@@ -119,6 +119,7 @@
       <div id="jobBannerFail" class="over-text"></div>
       <div class="sub">タップで取り込みの状況を見る ›</div>
     </button>
+    <div class="card" id="uncheckedCard" hidden><div class="note" id="uncheckedNote" style="margin:0"></div></div>
     <div class="card">
       <div class="label">今月の支出</div>
       <div class="big num" id="total">—</div>
@@ -286,7 +287,7 @@
         return j.status;
       },
       delay: 300, aiFail: 0, aiDelay: 300, ai: [{ amount: 250000, currency: 'VND', date: ym + '-07', store: 'WinMart（牛乳）', shop: 'WinMart', item: '牛乳', receipt: 'r9', total: 325000, category: '食料品' }, { amount: 75000, currency: 'VND', date: ym + '-07', store: 'WinMart（洗剤）', shop: 'WinMart', item: '洗剤', receipt: 'r9', total: 325000, category: '日用品' }],
-      getData: function (m) { return { me: '夫', rate: 170, rateSource: 'auto', month: m || ym, today: ym + '-' + ('0' + t.getDate()).slice(-2), budgets: budgets, tx: (m || ym) === ym ? tx : [], hasKey: true,
+      getData: function (m) { return { me: '夫', rate: 170, rateSource: 'auto', month: m || ym, today: ym + '-' + ('0' + t.getDate()).slice(-2), budgets: budgets, tx: (m || ym) === ym ? tx : [], hasKey: true, unchecked: M.unchecked || 0,
         jobs: jobs.slice().reverse().slice(0, 20).map(function (j) { var a = j.status === '待ち' || j.status === '処理中' || j.status === '登録中'; return { id: j.id, by: j.by, mine: j.mine, at: j.at, status: j.status, note: j.note, count: j.count, waited: a ? Math.round((Date.now() - j.since) / 1000) : 0 }; }) }; },
       saveExpense: function (e) {
         var old = tx.filter(function (x) { return x.id === e.id; })[0] || {};
@@ -456,6 +457,10 @@
     $('jobBanner').hidden = !running && !failed;
     $('jobBannerRun').textContent = running ? 'レシートを読み取り中（' + running + '枚）' : '';
     $('jobBannerFail').textContent = failed ? '読み取れなかった写真があります' : '';
+    // 写真そのものとの答え合わせがまだの枚数（読み取りの金額・品名が写真と合っているかは未確認）
+    var unchecked = Number(d.unchecked) || 0;
+    $('uncheckedCard').hidden = !unchecked;
+    $('uncheckedNote').textContent = unchecked ? '写真との答え合わせがまだ: ' + unchecked + '枚（金額・品名は確認前です）' : '';
   }
 
   function byDateDesc(a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }
