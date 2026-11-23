@@ -20,6 +20,8 @@
   button.btn { width: 100%; border: 0; font-size: 16px; }
   .btn { display: block; margin: 20px 0 0; padding: 14px; border-radius: 14px; background: #d9fb63; color: #292352;
     font-weight: 700; text-decoration: none; }
+  .step { font-weight: 700; opacity: 1; margin-top: 20px; text-align: left; }
+  #accts .btn { margin-top: 10px; }
   [hidden] { display: none !important; }
 </style>
 </head>
@@ -30,16 +32,21 @@
   <form id="form" hidden>
     <p>家計簿の URL を貼り付けてください（この端末の中だけに保存されます）。</p>
     <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
-    <p id="err" hidden>家計簿の URL ではないようです。Safari のアドレス欄からコピーし直してください。</p>
+    <p id="err" hidden>家計簿の URL ではないようです。コピーし直してください。</p>
     <button class="btn" type="submit">設定する</button>
   </form>
-  <div id="guide" hidden>
-    <p><b>いま表示しているこのページ</b>を、ホーム画面に追加してください。</p>
-    <ol>
-      <li>共有ボタン →「ホーム画面に追加」</li>
-      <li>アイコンがこの絵になっているのを確かめて「追加」</li>
-    </ol>
-    <a class="btn" id="go" href="#">追加できた（家計簿を開く）</a>
+  <div id="setup" hidden>
+    <div id="addStep">
+      <p class="step">① このページをホーム画面に追加</p>
+      <ol>
+        <li>共有ボタン →「ホーム画面に追加」</li>
+        <li>アイコンがこの絵になっているのを確かめて「追加」</li>
+      </ol>
+      <p class="step">② 家計簿に使う Google アカウントを選ぶ</p>
+    </div>
+    <p id="backMsg" hidden><b>家計簿が開けませんでしたか？</b><br>別の番号を選び直してください。</p>
+    <p>このブラウザで Google に複数のアカウントでログインしている場合、家計簿に使うアカウントが何番目かを選びます。わからなければ 1番目から試し、エラーの画面が出たら「戻る」でここに戻って次を試してください。</p>
+    <div id="accts"></div>
   </div>
   <p id="moving" hidden>家計簿を開いています…<br><a id="manual" href="#" style="color:#d9fb63">開かないときはここを押す</a></p>
 </main>
@@ -47,54 +54,67 @@
 (function () {
   // このページの役目: ホーム画面のアイコンを出すことと、家計簿へ移動すること。
   // 行き先は端末の中（と URL の # 以降）だけに持ち、このページ自体には書かない。
-  // 決まり: 行き先を知っていれば、すぐ家計簿へ移動する。
-  //         移動しないのは「設定中のタブ」（行き先を入力した直後、または ?setup で開いたタブ）の10分間だけ。
-  //         URL の形（?open の有無・# の有無）や、端末に残した印には頼らない。
-  var OK = /^https:\/\/script\.google\.com\/macros\/(u\/\d+\/)?s\/[A-Za-z0-9_-]+\/exec$/;
+  // 複数の Google アカウントにログインしている前提: 何番目のアカウントで開くか（/u/N/）を端末ごとに覚える。
+  // 決まり: 行き先とアカウントの番号が決まっていれば、すぐ家計簿へ移動する。
+  //         移動しないのは ①番号をまだ選んでいない ②「戻る」で戻ってきた（＝開けなかった）③ ?setup で開いた とき。
+  var RE = /^https:\/\/script\.google\.com\/macros\/(?:u\/(\d+)\/)?s\/([A-Za-z0-9_-]+)\/exec$/;
   var store = function (st) { return {
     get: function (k) { try { return st.getItem(k) || ''; } catch (e) { return ''; } },
     set: function (k, v) { try { st.setItem(k, v); } catch (e) {} } }; };
   var L = store(window.localStorage), T = store(window.sessionStorage);
   var $ = function (id) { return document.getElementById(id); };
+  var parse = function (u) { var m = RE.exec(u || ''); return m ? { id: m[2], idx: m[1] === undefined ? '' : m[1] } : null; };
+  var build = function (id, idx) { return 'https://script.google.com/macros/' + (idx === '' ? '' : 'u/' + idx + '/') + 's/' + id + '/exec'; };
+  var okIdx = function (v) { return /^[0-9]$/.test(v); };
+
   var hash = '';
   try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
-  var dest = OK.test(hash) ? hash : (OK.test(L.get('dest')) ? L.get('dest') : '');
-  var clean = function (d) { return location.pathname + '#' + encodeURIComponent(d); };
-  var inSetup = function () { var t = Number(T.get('setup')) || 0; return t > 0 && Date.now() - t < 10 * 60 * 1000; };
+  var fromHash = parse(hash), old = parse(L.get('dest')); // dest は前の版が保存した形
+  var id = L.get('id') || (old && old.id) || (fromHash && fromHash.id) || '';
+  if (!/^[A-Za-z0-9_-]+$/.test(id)) id = '';
+  var idx = L.get('idx');
+  if (!okIdx(idx)) idx = (old && old.idx) || (fromHash && fromHash.id === id && fromHash.idx) || '';
+
   var go = function () {
     T.set('setup', '');
-    $('form').hidden = true; $('guide').hidden = true; $('moving').hidden = false; $('manual').href = dest;
-    location.replace(dest);
+    var dest = build(id, idx);
+    $('form').hidden = true; $('setup').hidden = true; $('moving').hidden = false; $('manual').href = dest;
+    location.href = dest; // 履歴に残す（開けなかったとき「戻る」でここに戻れるように）
   };
-  var guide = function () {
-    $('form').hidden = true; $('guide').hidden = false; $('go').href = dest;
-    $('go').addEventListener('click', function (e) { e.preventDefault(); go(); });
-    // ホーム画面のアイコンを押すと、Safari が読み込み直さずにこのタブを前に出すだけのことがある。そのときも移動する
-    var away = false;
-    document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState === 'hidden') away = true; else if (away) go();
+  var choose = function (back) {
+    $('form').hidden = true; $('moving').hidden = true; $('setup').hidden = false;
+    $('addStep').hidden = back || navigator.standalone === true;
+    $('backMsg').hidden = !back;
+    var box = $('accts'); box.textContent = '';
+    [0, 1, 2, 3].forEach(function (n) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
+      b.textContent = (n + 1) + '番目のアカウントで開く' + (String(n) === idx ? '（いまの設定）' : '');
+      b.addEventListener('click', function () { idx = String(n); L.set('idx', idx); go(); });
+      box.appendChild(b);
     });
   };
 
-  if (!dest) { // 行き先をまだ知らない: 貼り付けてもらう
+  if (!id) { // 行き先をまだ知らない: 貼り付けてもらう
     $('form').hidden = false;
     $('form').addEventListener('submit', function (e) {
       e.preventDefault();
-      var v = $('url').value.trim().split(/[?#]/)[0];
-      if (!OK.test(v)) { $('err').hidden = false; return; }
-      dest = v; L.set('dest', v);
-      if (navigator.standalone === true) { go(); return; } // ホーム画面から Web アプリとして開いているなら、追加の案内は要らない
-      T.set('setup', String(Date.now()));
-      try { history.replaceState(null, '', clean(v)); } catch (err) {}
-      guide();
+      var p = parse($('url').value.trim().split(/[?#]/)[0]);
+      if (!p) { $('err').hidden = false; return; }
+      id = p.id; idx = p.idx; L.set('id', id); if (okIdx(idx)) L.set('idx', idx);
+      try { history.replaceState(null, '', location.pathname + '#' + encodeURIComponent(build(id, ''))); } catch (err) {}
+      choose(false);
     });
     return;
   }
-  L.set('dest', dest);
-  if (/[?&]setup\b/.test(location.search)) { // 追加をやり直したいとき用。きれいな URL に読み込み直してから案内を出す
-    T.set('setup', String(Date.now())); location.replace(clean(dest)); return;
+  L.set('id', id); if (okIdx(idx)) L.set('idx', idx);
+  if (/[?&]setup\b/.test(location.search)) { // 設定をやり直したいとき用。きれいな URL に読み込み直してから選ぶ画面を出す
+    T.set('setup', '1'); location.replace(location.pathname + '#' + encodeURIComponent(build(id, ''))); return;
   }
-  if (inSetup() && navigator.standalone !== true) { guide(); return; }
+  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+  var cameBack = nav.type === 'back_forward';
+  window.addEventListener('pageshow', function (e) { if (e.persisted) choose(true); }); // 「戻る」で戻ってきた＝開けなかった
+  if (!okIdx(idx) || T.get('setup') === '1') { choose(false); return; }
+  if (cameBack) { choose(true); return; }
   go();
 })();
 </script>
