@@ -1,123 +1,863 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
 <title>ふたりの家計簿</title>
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon.png">
 <style>
-  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
-    background: #292352; color: #f7f5fc; font-family: -apple-system, "Hiragino Sans", sans-serif; }
-  main { width: min(88vw, 360px); text-align: center; }
-  img { width: 96px; height: 96px; border-radius: 22px; }
-  h1 { font-size: 20px; margin: 16px 0 8px; }
-  p { font-size: 14px; line-height: 1.7; opacity: .85; margin: 8px 0; }
-  ol { text-align: left; font-size: 14px; line-height: 1.8; padding-left: 1.4em; }
-  input { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 12px; border: 0; font-size: 14px; }
-  #err { color: #ffb4a8; }
-  button.btn { width: 100%; border: 0; font-size: 16px; }
-  .btn { display: block; margin: 20px 0 0; padding: 14px; border-radius: 14px; background: #d9fb63; color: #292352;
-    font-weight: 700; text-decoration: none; }
-  .step { font-weight: 700; opacity: 1; margin-top: 20px; text-align: left; }
-  #accts .btn { margin-top: 10px; }
+  :root {
+    --bg: #f5f3ee; --card: #ffffff; --ink: #22252b; --sub: #6b7280; --line: #e5e2da;
+    --accent: #1f7a6d; --accent-weak: #d9efea; --warn: #c2410c; --warn-weak: #fde4d3; --track: #ebe8e0;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #15171a; --card: #1f2226; --ink: #eceef1; --sub: #9aa1ac; --line: #30343a;
+      --accent: #4fc3b1; --accent-weak: #1d3a36; --warn: #fb923c; --warn-weak: #43281a; --track: #2a2e33;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", sans-serif; font-size: 15px; line-height: 1.5; padding-bottom: 84px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); padding: 12px 16px 8px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid var(--line); }
+  .month { display: flex; align-items: center; gap: 4px; flex: 1; font-weight: 700; font-size: 17px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  .icon-btn { border: 0; background: transparent; font-size: 20px; padding: 4px 10px; border-radius: 8px; }
+  .seg { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; background: var(--card); }
+  .seg button { border: 0; background: transparent; padding: 6px 14px; font-size: 13px; font-weight: 600; color: var(--sub); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  main { padding: 16px; max-width: 560px; margin: 0 auto; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 16px; margin-bottom: 14px; }
+  .label { font-size: 12px; color: var(--sub); }
+  .big { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .sub { color: var(--sub); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; background: var(--track); border-radius: 999px; overflow: hidden; margin: 8px 0 4px; position: relative; }
+  .bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+  .bar.over > i { background: var(--warn); }
+  .bar > b { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+  .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; background: var(--accent-weak); color: var(--accent); }
+  .pill.warn { background: var(--warn-weak); color: var(--warn); }
+  .cat { padding: 10px 0; border-top: 1px solid var(--line); }
+  .cat:first-child { border-top: 0; padding-top: 0; }
+  .cat .name { font-weight: 600; }
+  .num { font-variant-numeric: tabular-nums; }
+  .over-text { color: var(--warn); font-weight: 700; }
+  h2 { font-size: 14px; margin: 0 0 12px; color: var(--sub); font-weight: 700; }
+  nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 6; background: var(--card); border-top: 1px solid var(--line); display: flex; padding-bottom: env(safe-area-inset-bottom); }
+  nav button { flex: 1; border: 0; background: transparent; padding: 10px 0 8px; font-size: 11px; color: var(--sub); display: flex; flex-direction: column; align-items: center; gap: 2px; }
+  nav button span { font-size: 20px; line-height: 1; }
+  nav button.on { color: var(--accent); font-weight: 700; }
+  label.f { display: block; margin-bottom: 12px; }
+  label.f > span { display: block; font-size: 12px; color: var(--sub); margin-bottom: 4px; }
+  input, select { width: 100%; font: inherit; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 11px 12px; min-height: 46px; }
+  .two { display: grid; grid-template-columns: 1fr 110px; gap: 10px; }
+  .btn { width: 100%; border: 0; border-radius: 12px; padding: 14px; font-weight: 700; background: var(--accent); color: #fff; font-size: 16px; }
+  .btn.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  .btn.danger { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
+  .btn:disabled { opacity: .5; }
+  .btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .tx { display: flex; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); align-items: center; width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
+  .tx:first-of-type { border-top: 0; }
+  .tx .l { flex: 1; min-width: 0; }
+  .tx .memo { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+  .tx .r { text-align: right; }
+  .tx.in { padding-left: 14px; }
+  .rc { display: flex; justify-content: space-between; gap: 8px; padding: 12px 0 2px; border-top: 1px solid var(--line); font-weight: 700; }
+  .rc:first-child { border-top: 0; padding-top: 0; }
+  .rc + .tx { border-top: 0; }
+  button.cat { display: block; width: 100%; background: transparent; border-left: 0; border-right: 0; border-bottom: 0; text-align: left; }
+  .back { border: 0; background: transparent; color: var(--accent); font-weight: 700; padding: 0 0 12px; }
+  .brow { display: grid; grid-template-columns: 1fr 130px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .brow button { border: 0; background: transparent; color: var(--sub); font-size: 18px; }
+  .note { font-size: 12px; color: var(--sub); margin: 8px 0 0; }
+  #toast { position: fixed; left: 16px; right: 16px; bottom: 96px; z-index: 9; background: var(--ink); color: var(--bg); padding: 12px 14px; border-radius: 12px; font-size: 14px; display: none; text-align: center; }
+  #preview { max-width: 100%; max-height: 180px; border-radius: 10px; display: none; margin: 0 auto 12px; }
+  .job { padding: 10px 0; border-top: 1px solid var(--line); }
+  .job:first-child { border-top: 0; padding-top: 0; }
+  .job .note { margin: 4px 0 0; overflow-wrap: anywhere; }
+  .btn.small { width: auto; padding: 8px 16px; font-size: 14px; margin-top: 8px; }
+  button.card { display: block; width: 100%; text-align: left; }
+  .empty { color: var(--sub); text-align: center; padding: 20px 0; }
   [hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<main>
-  <img src="apple-touch-icon.png" alt="">
-  <h1>ふたりの家計簿</h1>
-  <form id="form" hidden>
-    <p>家計簿の URL を貼り付けてください（この端末の中だけに保存されます）。</p>
-    <input id="url" type="url" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
-    <p id="err" hidden>家計簿の URL ではないようです。コピーし直してください。</p>
-    <button class="btn" type="submit">設定する</button>
-  </form>
-  <div id="setup" hidden>
-    <div id="addStep">
-      <p class="step">① このページをホーム画面に追加</p>
-      <ol>
-        <li>共有ボタン →「ホーム画面に追加」</li>
-        <li>アイコンがこの絵になっているのを確かめて「追加」</li>
-      </ol>
-      <p class="step">② 家計簿に使う Google アカウントを選ぶ</p>
-    </div>
-    <p id="backMsg" hidden><b>家計簿が開けませんでしたか？</b><br>別の番号を選び直してください。開けていた場合は「いまの設定」を押してください。</p>
-    <p>このブラウザで Google に複数のアカウントでログインしている場合、家計簿に使うアカウントが何番目かを選びます。わからなければ 1番目から試し、エラーの画面が出たら「戻る」でここに戻って次を試してください。</p>
-    <div id="accts"></div>
+<div id="gate" hidden style="position:fixed;inset:0;z-index:1000;background:var(--bg);color:var(--ink);padding:max(32px,env(safe-area-inset-top)) 24px 24px;line-height:1.8;overflow:auto">
+  <p style="font-weight:700;font-size:18px">ふたりの家計簿</p>
+  <p id="gateMsg"></p>
+</div>
+<header>
+  <div class="month">
+    <button class="icon-btn" id="prev" aria-label="前の月">‹</button>
+    <span id="monthLabel">—</span>
+    <button class="icon-btn" id="next" aria-label="次の月">›</button>
   </div>
-  <p id="moving" hidden>家計簿を開いています…<br><a id="manual" href="#" style="color:#d9fb63">開かないときはここを押す</a></p>
+  <div class="seg" role="group" aria-label="表示通貨">
+    <button id="curVND" class="on">₫ ドン</button>
+    <button id="curJPY">¥ 円</button>
+  </div>
+</header>
+
+<main>
+  <div class="card" id="prog" hidden style="padding:12px 16px">
+    <div id="progText" style="font-weight:700"></div>
+    <div class="bar"><i id="progBar" style="width:0"></i></div>
+    <p class="note" id="progSub" style="margin:0"></p>
+  </div>
+  <!-- ホーム -->
+  <section id="v-home">
+    <button class="card" id="jobBanner" hidden>
+      <div id="jobBannerRun" style="font-weight:700"></div>
+      <div id="jobBannerFail" class="over-text"></div>
+      <div class="sub">タップで取り込みの状況を見る ›</div>
+    </button>
+    <div class="card">
+      <div class="label">今月の支出</div>
+      <div class="big num" id="total">—</div>
+      <div class="sub" id="totalOther"></div>
+      <div class="bar" id="totalBar"><i style="width:0"></i><b id="paceMark" hidden></b></div>
+      <div class="row"><span class="sub" id="budgetLine"></span><span class="pill" id="pct">—</span></div>
+      <p class="note" id="pace"></p>
+    </div>
+    <div class="card">
+      <h2>カテゴリ別（タップで内訳）</h2>
+      <div id="cats"></div>
+    </div>
+    <div class="card">
+      <h2>登録した人別</h2>
+      <div id="people"></div>
+      <p class="note" id="rateNote"></p>
+    </div>
+  </section>
+
+  <!-- カテゴリの内訳（一品ごと） -->
+  <section id="v-cat" hidden>
+    <div class="card">
+      <button class="back" id="catBack">‹ ホームに戻る</button>
+      <div class="row"><h2 id="catTitle" style="margin:0"></h2><span class="num" id="catSum" style="font-weight:700"></span></div>
+      <p class="note" style="margin:4px 0 8px">タップすると、カテゴリや金額を直せます。</p>
+      <div id="catItems"></div>
+    </div>
+  </section>
+
+  <!-- 追加・編集 -->
+  <section id="v-add" hidden>
+    <div class="btns" id="photoBtns">
+      <button class="btn" id="shoot">📷 レシートを撮る</button>
+      <button class="btn ghost" id="pick">画像から選ぶ（複数OK）</button>
+    </div>
+    <input type="file" id="fileCam" accept="image/*" capture="environment" hidden>
+    <input type="file" id="filePick" accept="image/*" multiple hidden>
+    <div class="card" id="jobsCard" hidden>
+      <h2>取り込みの状況</h2>
+      <div id="jobs"></div>
+    </div>
+    <div class="card">
+      <h2 id="formTitle">支出を登録</h2>
+      <img id="preview" alt="レシートのプレビュー">
+      <p class="note" id="aiState" style="margin:0 0 12px"></p>
+      <div id="importResult" style="margin:0 0 12px"></div>
+      <label class="f"><span>日付</span><input type="date" id="fDate"></label>
+      <div class="two">
+        <label class="f"><span>金額</span><input type="text" inputmode="numeric" id="fAmount" placeholder="0" autocomplete="off"></label>
+        <label class="f"><span>通貨</span><select id="fCur"><option value="VND">₫ ドン</option><option value="JPY">¥ 円</option></select></label>
+      </div>
+      <label class="f"><span>カテゴリ</span><select id="fCat"></select></label>
+      <label class="f"><span>店名・メモ</span><input type="text" id="fMemo" maxlength="200" placeholder="例: WinMart"></label>
+      <label class="f"><span>品名（空でもOK）</span><input type="text" id="fItem" maxlength="100" placeholder="例: 牛乳"></label>
+      <button class="btn" id="save">保存する</button>
+      <div id="editBtns" hidden style="margin-top:10px; display:grid; gap:10px">
+        <button class="btn danger" id="del">この明細を削除</button>
+        <button class="btn ghost" id="cancel">編集をやめる</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 明細 -->
+  <section id="v-list" hidden>
+    <div class="card">
+      <h2>この月の明細（レシートごと・タップで修正）</h2>
+      <div id="txs"></div>
+    </div>
+  </section>
+
+  <!-- 予算 -->
+  <section id="v-budget" hidden>
+    <div class="card">
+      <h2>月の予算（ドン建て）</h2>
+      <div id="brows"></div>
+      <button class="btn ghost" id="addCat" style="margin:6px 0 12px">＋ カテゴリを追加</button>
+      <div class="row" style="margin-bottom:12px"><span class="sub">合計</span><span class="num" id="bTotal"></span></div>
+      <button class="btn" id="saveBudget">予算を保存する</button>
+      <p class="note">カテゴリ名を変えても、過去の明細のカテゴリ名は元のまま残ります。</p>
+    </div>
+  </section>
 </main>
+
+<nav>
+  <button data-v="home" class="on"><span>◔</span>ホーム</button>
+  <button data-v="add"><span>＋</span>追加</button>
+  <button data-v="list"><span>≡</span>明細</button>
+  <button data-v="budget"><span>◎</span>予算</button>
+</nav>
+<div id="toast" role="status"></div>
+
 <script>
 (function () {
-  // このページの役目: ホーム画面のアイコンを出すことと、家計簿へ移動すること。
-  // 行き先は端末の中（と URL の # 以降）だけに持ち、このページ自体には書かない。
-  // 複数の Google アカウントにログインしている前提: 何番目のアカウントで開くか（/u/N/）を端末ごとに覚える。
-  // 決まり: 行き先とアカウントの番号が決まっていれば、すぐ家計簿へ移動する。
-  //         移動しないのは ①番号をまだ選んでいない ②「戻る」で戻ってきた、または前に開いてから20秒以内にまた開いた
-  //         （＝開けなかったので開き直した、とみなして選び直しの画面を出す）③ ?setup で開いた とき。
-  var RE = /^https:\/\/script\.google\.com\/macros\/(?:u\/(\d+)\/)?s\/([A-Za-z0-9_-]+)\/exec$/;
-  var store = function (st) { return {
-    get: function (k) { try { return st.getItem(k) || ''; } catch (e) { return ''; } },
-    set: function (k, v) { try { st.setItem(k, v); } catch (e) {} } }; };
-  var L = store(window.localStorage), T = store(window.sessionStorage);
+  'use strict';
   var $ = function (id) { return document.getElementById(id); };
-  var parse = function (u) { var m = RE.exec(u || ''); return m ? { id: m[2], idx: m[1] === undefined ? '' : m[1] } : null; };
-  var build = function (id, idx) { return 'https://script.google.com/macros/' + (idx === '' ? '' : 'u/' + idx + '/') + 's/' + id + '/exec'; };
-  var okIdx = function (v) { return /^[0-9]$/.test(v); };
 
-  var hash = '';
-  try { hash = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
-  var fromHash = parse(hash), old = parse(L.get('dest')); // dest は前の版が保存した形
-  var id = L.get('id') || (old && old.id) || (fromHash && fromHash.id) || '';
-  if (!/^[A-Za-z0-9_-]+$/.test(id)) id = '';
-  var idx = L.get('idx');
-  if (!okIdx(idx)) idx = (old && old.idx) || (fromHash && fromHash.id === id && fromHash.idx) || '';
-
-  var go = function () {
-    T.set('setup', ''); L.set('lastGo', String(Date.now()));
-    var dest = build(id, idx);
-    $('form').hidden = true; $('setup').hidden = true; $('moving').hidden = false; $('manual').href = dest;
-    location.href = dest; // 履歴に残す（開けなかったとき「戻る」でここに戻れるように）
-  };
-  var choose = function (back) {
-    $('form').hidden = true; $('moving').hidden = true; $('setup').hidden = false;
-    $('addStep').hidden = back || navigator.standalone === true;
-    $('backMsg').hidden = !back;
-    var box = $('accts'); box.textContent = '';
-    [0, 1, 2, 3].forEach(function (n) {
-      var b = document.createElement('button'); b.type = 'button'; b.className = 'btn';
-      b.textContent = (n + 1) + '番目のアカウントで開く' + (String(n) === idx ? '（いまの設定）' : '');
-      b.addEventListener('click', function () { idx = String(n); L.set('idx', idx); go(); });
-      box.appendChild(b);
+  // ---------- サーバー呼び出し ----------
+  // この画面は静的ページで、データは Apps Script に POST で取りに行く。Google のログインは使わない
+  // （複数アカウントでログインしているブラウザでも開けるように、ログイン情報は一切付けない）。
+  // 行き先（配備ID）と本人の合言葉は、専用リンクの # 以降「配備ID.合言葉」で受け取り、この端末の中だけに覚える。
+  // # は URL に残す（ホーム画面に追加したアイコンが # ごと覚え、端末のデータを消しても開けるように）。
+  var CFG = (function () {
+    var RE = /^([A-Za-z0-9_-]{20,200})\.([0-9a-f]{64})$/, h = '', saved = '';
+    try { h = decodeURIComponent(location.hash.slice(1)); } catch (e) {}
+    try { saved = localStorage.getItem('kk') || ''; } catch (e) {}
+    var m = RE.exec(h);
+    if (m) { try { localStorage.setItem('kk', h); } catch (e) {} }
+    else {
+      m = RE.exec(saved);
+      if (m) { try { history.replaceState(null, '', location.pathname + location.search + '#' + saved); } catch (e) {} }
+    }
+    return m ? { url: 'https://script.google.com/macros/s/' + m[1] + '/exec', k: m[2] } : null;
+  })();
+  // 同じタブで別の専用リンク（# だけが違う）を開くとページは読み込み直されず、前の合言葉のまま動いてしまう。
+  // # が変わったら画面を幕で止め、必ず読み込み直して新しい # で始め直す
+  window.addEventListener('hashchange', function () {
+    try { $('gateMsg').textContent = '読み込み直しています…'; $('gate').hidden = false; } catch (e) {}
+    location.reload();
+  });
+  // 見本データで動かすのは、手元のファイルか ?mock を付けて開いたときだけ（画面テスト用）
+  var isMock = !CFG && (location.protocol === 'file:' || /[?&]mock\b/.test(location.search));
+  function gate(msg) { $('gateMsg').textContent = msg; $('gate').hidden = false; }
+  if (!CFG && !isMock) gate('自分の専用リンクから開いてください。専用リンクは、家計簿のスプレッドシートの「設定」にあります。');
+  var mock = (function () {
+    var t = new Date(), ym = t.getFullYear() + '-' + ('0' + (t.getMonth() + 1)).slice(-2);
+    var budgets = [['食料品', 8e6], ['外食・カフェ', 8e6], ['日用品', 2e6], ['交通', 2e6], ['住居・光熱・通信', 5e6], ['その他', 2e6]]
+      .map(function (b) { return { category: b[0], budget: b[1] }; });
+    var tx = [
+      { id: 'a', date: ym + '-02', category: '食料品', memo: 'WinMart', item: '牛乳', receipt: 'r1', amount: 45000, currency: 'VND', vnd: 45000, jpy: 265, by: '妻' },
+      { id: 'a2', date: ym + '-02', category: '食料品', memo: 'WinMart', item: '豚肉', receipt: 'r1', amount: 600000, currency: 'VND', vnd: 600000, jpy: 3529, by: '妻' },
+      { id: 'a3', date: ym + '-02', category: '日用品', memo: 'WinMart', item: 'ゴミ袋', receipt: 'r1', amount: 200000, currency: 'VND', vnd: 200000, jpy: 1176, by: '妻' },
+      { id: 'b', date: ym + '-03', category: '外食・カフェ', memo: 'Pizza 4P\'s', amount: 1250000, currency: 'VND', vnd: 1250000, jpy: 7353, by: '夫' },
+      { id: 'c', date: ym + '-05', category: '日用品', memo: 'Amazon', amount: 15800, currency: 'JPY', vnd: 2686000, jpy: 15800, by: '夫' },
+      { id: 'd', date: ym + '-06', category: '交通', memo: 'Grab', amount: 96000, currency: 'VND', vnd: 96000, jpy: 565, by: '妻' }
+    ];
+    // 裏で進む読み取りの模擬。aiFail: 失敗させる回数 / queueFail: 受け付けを失敗させる回数 / kickDrop: processReceipt が届かなかったことにする回数
+    var jobs = [], jobSeq = 0;
+    function jobOf(id) { return jobs.filter(function (j) { return j.id === id; })[0]; }
+    function hm(d) { var z = function (n) { return ('0' + n).slice(-2); }; return z(d.getMonth() + 1) + '/' + z(d.getDate()) + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()); }
+    var M = {
+      jobs: jobs, queueFail: 0, kickDrop: 0,
+      queueReceipt: function (b64, key) {
+        if (M.queueFail > 0) { M.queueFail--; throw new Error(M.queueErr || '通信に失敗しました'); }
+        var same = jobs.filter(function (j) { return key && j.key === key; })[0];
+        if (same) return same.id;
+        var j = { id: 'job' + (++jobSeq), key: key, by: '夫', mine: true, at: hm(new Date()), status: '待ち', note: '', count: 0, since: Date.now() };
+        jobs.push(j); return j.id;
+      },
+      processReceipt: function (id) {
+        var j = jobOf(id); if (!j) return '';
+        if (M.kickDrop > 0) { M.kickDrop--; return j.status; }
+        if (!j.mine || j.status !== '待ち') return j.status; // 進めるのは本人の「待ち」だけ（二重に走らせない）
+        j.status = '処理中'; j.since = Date.now();
+        return new Promise(function (res) {
+          setTimeout(function () {
+            if (M.aiFail > 0) { M.aiFail--; j.status = '失敗'; j.note = 'AI読み取りに失敗しました（コード 503）'; return res(j.status); }
+            M.ai.forEach(function (r, n) { M.saveExpense({ id: id + '-' + n, date: r.date, category: r.category, memo: r.shop, item: r.item, amount: r.amount, currency: r.currency, receipt: 'r-' + id }); });
+            j.status = '済み'; j.count = M.ai.length; j.note = M.ai.length + '件を登録（レシート1枚）'; res(j.status);
+          }, M.aiDelay);
+        });
+      },
+      retryReceipt: function (id) {
+        var j = jobOf(id); if (!j) throw new Error('対象の写真が見つかりません');
+        if (j.mine && j.status === '失敗') { j.status = '待ち'; j.note = ''; j.since = Date.now(); }
+        return j.status;
+      },
+      delay: 300, aiFail: 0, aiDelay: 300, ai: [{ amount: 250000, currency: 'VND', date: ym + '-07', store: 'WinMart（牛乳）', shop: 'WinMart', item: '牛乳', receipt: 'r9', total: 325000, category: '食料品' }, { amount: 75000, currency: 'VND', date: ym + '-07', store: 'WinMart（洗剤）', shop: 'WinMart', item: '洗剤', receipt: 'r9', total: 325000, category: '日用品' }],
+      getData: function (m) { return { me: '夫', rate: 170, rateSource: 'auto', month: m || ym, today: ym + '-' + ('0' + t.getDate()).slice(-2), budgets: budgets, tx: (m || ym) === ym ? tx : [], hasKey: true,
+        jobs: jobs.slice().reverse().slice(0, 20).map(function (j) { var a = j.status === '待ち' || j.status === '処理中' || j.status === '登録中'; return { id: j.id, by: j.by, mine: j.mine, at: j.at, status: j.status, note: j.note, count: j.count, waited: a ? Math.round((Date.now() - j.since) / 1000) : 0 }; }) }; },
+      saveExpense: function (e) {
+        var old = tx.filter(function (x) { return x.id === e.id; })[0] || {};
+        var o = { id: e.id || String(Math.random()), date: e.date, category: e.category, memo: e.memo, amount: e.amount, currency: e.currency, by: '夫', item: e.item || '', receipt: e.receipt || old.receipt || '',
+          vnd: e.currency === 'VND' ? e.amount : Math.round(e.amount * 170), jpy: e.currency === 'JPY' ? e.amount : Math.round(e.amount / 170) };
+        tx = tx.filter(function (x) { return x.id !== o.id; }); tx.push(o); return true;
+      },
+      deleteExpense: function (id) { tx = tx.filter(function (x) { return x.id !== id; }); return true; },
+      saveBudgets: function (l) { budgets = l; return true; },
+      saveReceiptImage: function () { if (M.imgFail) throw new Error(M.imgFail); M.images = (M.images || 0) + 1; return 'img'; },
+      saveExpenses: function (l) { var n = 0; l.forEach(function (e) { if (tx.some(function (x) { return x.id === e.id; })) return; M.saveExpense(e); n++; }); return n; },
+      analyzeReceipt: function () { if (M.aiFail > 0) { M.aiFail--; throw new Error('AI読み取りに失敗しました（コード 503）'); } return [].concat(M.ai); }
+    };
+    return M;
+  })();
+  if (isMock) window.__mock = mock; // 画面テスト用
+  function call(fn) {
+    var args = Array.prototype.slice.call(arguments, 1);
+    return new Promise(function (res, rej) {
+      if (isMock) return setTimeout(function () { // モックが Promise を返したら（裏で進む読み取り）終わるまで待つ
+        try { Promise.resolve(mock[fn].apply(null, args)).then(function (v) { res(v === undefined ? v : JSON.parse(JSON.stringify(v))); }, rej); } catch (e) { rej(e); }
+      }, fn === 'analyzeReceipt' ? mock.aiDelay : mock.delay);
+      if (!CFG) return rej(new Error('専用リンクから開いてください'));
+      // text/plain で送る（事前確認の通信を出さないため）。ログイン情報は付けない
+      fetch(CFG.url, { method: 'POST', credentials: 'omit', redirect: 'follow', cache: 'no-store', referrerPolicy: 'no-referrer',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ k: CFG.k, fn: fn, args: args }) })
+        .then(function (r) {
+          if (!r.ok) throw new Error('サーバーにつながりませんでした（' + r.status + '）');
+          return r.json().catch(function () { throw new Error('サーバーの返事を読めませんでした'); });
+        }, function () { throw new Error('通信できませんでした。電波の状態を確かめてください'); })
+        .then(function (o) {
+          if (o && o.ok) return res(o.result === null ? undefined : o.result);
+          var msg = String((o && o.error) || '失敗しました');
+          if (msg === '権限がありません') gate('この端末の合言葉が使えなくなっています。家計簿のスプレッドシートの「設定」にある、自分の専用リンクを開き直してください。');
+          rej(new Error(msg));
+        }).catch(rej);
     });
-  };
+  }
 
-  if (!id) { // 行き先をまだ知らない: 貼り付けてもらう
-    $('form').hidden = false;
-    $('form').addEventListener('submit', function (e) {
-      e.preventDefault();
-      var p = parse($('url').value.trim().split(/[?#]/)[0]);
-      if (!p) { $('err').hidden = false; return; }
-      id = p.id; idx = p.idx; L.set('id', id); if (okIdx(idx)) L.set('idx', idx);
-      try { history.replaceState(null, '', location.pathname + '#' + encodeURIComponent(build(id, ''))); } catch (err) {}
-      choose(false);
+  // ---------- 状態 ----------
+  // follow: 利用者が月を動かしていない間は「今月」に追従する / scanning: 写真を送っている間
+  // seen: 前回読み込んだときの取り込みの状態（済みに変わったことを知らせる）/ kicked: processReceipt を最後に呼んだ時刻（画像ごと）
+  var S = { data: null, month: null, cur: 'VND', view: 'home', cat: null, back: 'home', editId: null, busy: false, follow: true, loadSeq: 0, scanning: false, imp: null, pending: [], touched: false, dateTouched: false, lowOk: null, seen: {}, kicked: {}, retrying: {} };
+  try { S.cur = localStorage.getItem('cur') === 'JPY' ? 'JPY' : 'VND'; } catch (e) {}
+
+  function fmt(n, cur) { return (cur === 'JPY' ? '¥' : '₫') + Math.round(n).toLocaleString('ja-JP'); }
+  function other() { return S.cur === 'VND' ? 'JPY' : 'VND'; }
+  function txVal(t, cur) { return cur === 'JPY' ? t.jpy : t.vnd; }
+  function budVal(vnd, cur) { return cur === 'JPY' ? vnd / S.data.rate : vnd; }
+  function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(toast.t); toast.t = setTimeout(function () { t.style.display = 'none'; }, 4000); }
+  function errMsg(e) { return String((e && e.message) || e).replace(/^Error:\s*/, '').replace(/^\[(設定|更新あり)\]\s*/, ''); }
+
+  // 金額はドンも円も整数だけ。「1.250.000」「1,250,000」「1 250 000」はどれも桁区切りとして読む
+  // 戻り値: 整数 / null（空欄）/ NaN（数字として読めない）
+  function parseAmount(v) {
+    var raw = String(v == null ? '' : v).trim();
+    if (!raw) return null;
+    // 区切りを使うなら3桁ごとだけ認める（「1,5」「12.5」のような曖昧な入力は読み替えず、直してもらう）
+    if (!/^(\d{1,3}([.,\s]\d{3})+|\d+)$/.test(raw)) return NaN;
+    return Number(raw.replace(/[^\d]/g, ''));
+  }
+  function groupDigits(input, ev) { // 入力中に 1,250,000 の形へ整える
+    if (ev && ev.inputType === 'insertFromPaste') return; // 貼り付けた値は書き換えず、保存時に確かめる
+    if (/[^\d,]/.test(input.value)) return;               // ドットや空白を自分で打っているときも触らない
+    var d = input.value.replace(/[^\d]/g, '');
+    input.value = d ? Number(d).toLocaleString('ja-JP') : '';
+  }
+
+  // ---------- 読み込み ----------
+  // light: 入力欄に触らない読み直し（取り込みの状況の定期更新用。カテゴリの選択肢・日付・予算の入力欄は描き直さない）
+  function load(quiet, month, light) {
+    var seq = ++S.loadSeq;
+    var want = month != null ? month : (S.follow ? '' : S.month);
+    return call('getData', want).then(function (d) {
+      if (seq !== S.loadSeq) return; // 後から出した要求が先に返っていたら、古い応答は捨てる
+      S.data = d; S.month = d.month; confirmPending(d.tx); render(light);
+      if (!light && !S.editId && !S.dateTouched && !S.scanning) $('fDate').value = d.today; // 開きっぱなしで日付が変わっても今日になる
+      jobsArrived(d.jobs || []);
+    }).catch(function (e) {
+      if (seq !== S.loadSeq) return;
+      if (S.data) { // 表示中の月に戻す（ラベルと次の月送りの基準がずれないように）
+        S.month = S.data.month; S.follow = S.month === S.data.today.slice(0, 7);
+        $('monthLabel').textContent = S.month.replace('-', '年') + '月';
+      }
+      if (!quiet) toast('読み込めませんでした: ' + errMsg(e));
     });
-    return;
   }
-  L.set('id', id); if (okIdx(idx)) L.set('idx', idx);
-  if (/[?&]setup\b/.test(location.search)) { // 設定をやり直したいとき用。きれいな URL に読み込み直してから選ぶ画面を出す
-    T.set('setup', '1'); location.replace(location.pathname + '#' + encodeURIComponent(build(id, ''))); return;
+  function shiftMonth(n) {
+    if (!S.data) return;
+    var p = S.month.split('-'), d = new Date(Number(p[0]), Number(p[1]) - 1 + n, 1);
+    var m = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2);
+    S.month = m; S.follow = m === S.data.today.slice(0, 7);
+    $('monthLabel').textContent = m.replace('-', '年') + '月（読み込み中）';
+    load(false, m);
   }
-  var nav = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
-  var cameBack = nav.type === 'back_forward';
-  window.addEventListener('pageshow', function (e) { if (e.persisted) choose(true); }); // 「戻る」で戻ってきた＝開けなかった
-  if (!okIdx(idx) || T.get('setup') === '1') { choose(false); return; }
-  var since = Date.now() - (Number(L.get('lastGo')) || 0);
-  if (cameBack || (since >= 0 && since < 20000)) { choose(true); return; }
-  go();
+
+  // ---------- 描画 ----------
+  function render(light) {
+    var d = S.data; if (!d) return;
+    $('monthLabel').textContent = d.month.replace('-', '年') + '月';
+    $('curVND').className = S.cur === 'VND' ? 'on' : ''; $('curJPY').className = S.cur === 'JPY' ? 'on' : '';
+    renderHome(); renderList(); renderCat(); renderJobs();
+    if (light) return;
+    fillCats();
+    if (S.view === 'budget' && !$('brows').dataset.dirty) renderBudget();
+  }
+
+  function renderHome() {
+    var d = S.data, c = S.cur, o = other();
+    var spent = 0, spentO = 0, byCat = {}, byWho = {};
+    d.tx.forEach(function (t) {
+      spent += txVal(t, c); spentO += txVal(t, o);
+      byCat[t.category] = (byCat[t.category] || 0) + txVal(t, c);
+      byWho[t.by] = (byWho[t.by] || 0) + txVal(t, c);
+    });
+    var budVnd = d.budgets.reduce(function (a, b) { return a + b.budget; }, 0), bud = budVal(budVnd, c);
+    var pct = bud > 0 ? spent / bud * 100 : 0;
+    $('total').textContent = fmt(spent, c);
+    $('totalOther').textContent = '≈ ' + fmt(spentO, o);
+    $('totalBar').className = 'bar' + (pct > 100 ? ' over' : '');
+    $('totalBar').firstElementChild.style.width = Math.min(pct, 100) + '%';
+    $('budgetLine').textContent = '予算 ' + fmt(bud, c) + '　残り ' + fmt(bud - spent, c);
+    $('pct').textContent = bud > 0 ? Math.round(pct) + '%' : '予算未設定';
+    $('pct').className = 'pill' + (pct > 100 ? ' warn' : '');
+
+    // ペース（今日までに使ってよい目安との差）
+    var p = d.month.split('-'), days = new Date(Number(p[0]), Number(p[1]), 0).getDate();
+    var cm = d.today.slice(0, 7), pace = $('pace'), mark = $('paceMark');
+    if (d.month === cm && bud > 0) {
+      var day = Number(d.today.slice(8, 10)), target = bud * day / days, diff = spent - target;
+      mark.hidden = false; mark.style.left = (day / days * 100) + '%';
+      pace.textContent = '今日（' + day + '日／' + days + '日）までの目安は ' + fmt(target, c) + '。';
+      pace.appendChild(el('span', diff > 0 ? 'over-text' : '', diff > 0 ? '目安より ' + fmt(diff, c) + ' 多く使っています' : '目安より ' + fmt(-diff, c) + ' 少なく収まっています'));
+    } else {
+      mark.hidden = true;
+      pace.textContent = d.month < cm && bud > 0 ? (spent > bud ? '予算を ' + fmt(spent - bud, c) + ' 超えて終わりました' : '予算内（残り ' + fmt(bud - spent, c) + '）で終わりました') : '';
+    }
+
+    // カテゴリ別（予算にないカテゴリの支出も出す）
+    var cats = $('cats'); cats.textContent = '';
+    var list = d.budgets.map(function (b) { return { name: b.category, bud: budVal(b.budget, c) }; });
+    Object.keys(byCat).forEach(function (k) { if (!list.some(function (x) { return x.name === k; })) list.push({ name: k, bud: 0 }); });
+    list.forEach(function (x) {
+      var sp = byCat[x.name] || 0, pc = x.bud > 0 ? sp / x.bud * 100 : (sp > 0 ? 101 : 0);
+      var w = el('button', 'cat'), r = el('div', 'row');
+      w.addEventListener('click', function () { S.cat = x.name; renderCat(); show('cat'); });
+      r.appendChild(el('span', 'name', x.name));
+      r.appendChild(el('span', 'num' + (pc > 100 ? ' over-text' : ''), x.bud > 0 ? Math.round(pc) + '%' : (sp > 0 ? '予算なし' : '—')));
+      w.appendChild(r);
+      var bar = el('div', 'bar' + (pc > 100 ? ' over' : '')), i = el('i'); i.style.width = Math.min(pc, 100) + '%'; bar.appendChild(i); w.appendChild(bar);
+      w.appendChild(el('div', 'sub', fmt(sp, c) + ' ／ ' + fmt(x.bud, c) + '　›'));
+      cats.appendChild(w);
+    });
+
+    var people = $('people'); people.textContent = '';
+    var names = Object.keys(byWho);
+    if (!names.length) people.appendChild(el('div', 'empty', 'まだ登録がありません'));
+    names.forEach(function (n) { var r = el('div', 'row'); r.appendChild(el('span', '', n)); r.appendChild(el('span', 'num', fmt(byWho[n], c))); people.appendChild(r); });
+    var src = d.rateSource === 'manual' ? '（自動取得できず、設定シートの手動レートを使用中）'
+      : d.rateSource === 'none' ? '（レートを取得できていません。表示は仮の値です。新しい登録には設定シートの手動レートが必要です）' : '';
+    $('rateNote').textContent = '現在のレート: ¥1 = ₫' + (Math.round(d.rate * 10) / 10) + src + '　登録済みの明細は登録時のレートで換算しています';
+    $('rateNote').className = 'note' + (d.rateSource === 'none' ? ' over-text' : '');
+
+    // 裏で進んでいる読み取りの知らせ（タップで取り込み画面へ）
+    var jobs = d.jobs || [], running = jobs.filter(jobActive).length, failed = jobs.some(function (j) { return j.mine && j.status === '失敗'; });
+    $('jobBanner').hidden = !running && !failed;
+    $('jobBannerRun').textContent = running ? 'レシートを読み取り中（' + running + '枚）' : '';
+    $('jobBannerFail').textContent = failed ? '読み取れなかった写真があります' : '';
+  }
+
+  function byDateDesc(a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }
+  // 明細1行（一品）。withStore: 店名を下の行に出す（レシートの見出しの下では出さない）
+  function txRow(t, withStore, cls) {
+    var b = el('button', 'tx' + (cls ? ' ' + cls : '')), l = el('div', 'l'), r = el('div', 'r');
+    l.appendChild(el('div', 'memo', t.item || t.memo || t.category));
+    var sub = [t.date.slice(5).replace('-', '/')];
+    if (withStore && t.item && t.memo) sub.push(t.memo);
+    sub.push(t.category); sub.push(t.by);
+    l.appendChild(el('div', 'sub', sub.join('・')));
+    r.appendChild(el('div', 'num', fmt(txVal(t, S.cur), S.cur)));
+    r.appendChild(el('div', 'sub', fmt(txVal(t, other()), other())));
+    b.appendChild(l); b.appendChild(r);
+    b.addEventListener('click', function () { startEdit(t); });
+    return b;
+  }
+  // 明細: 同じレシートの品目をまとめ、見出しに店名と合計を出す（レシートIDの無い行はその行だけで1件）
+  function renderList() {
+    var box = $('txs'); box.textContent = '';
+    var tx = S.data.tx.slice().sort(byDateDesc);
+    if (!tx.length) { box.appendChild(el('div', 'empty', 'この月の明細はまだありません')); return; }
+    var groups = [], at = {};
+    tx.forEach(function (t) {
+      var k = t.receipt || ('id:' + t.id);
+      if (!at[k]) { at[k] = { rows: [] }; groups.push(at[k]); }
+      at[k].rows.push(t);
+    });
+    groups.forEach(function (g) {
+      if (g.rows.length === 1) { box.appendChild(txRow(g.rows[0], true)); return; }
+      var sum = 0; g.rows.forEach(function (t) { sum += txVal(t, S.cur); });
+      var h = el('div', 'rc');
+      h.appendChild(el('span', '', g.rows[0].date.slice(5).replace('-', '/') + '　' + (g.rows[0].memo || '（店名なし）') + '（' + g.rows.length + '品）'));
+      h.appendChild(el('span', 'num', fmt(sum, S.cur)));
+      box.appendChild(h);
+      g.rows.forEach(function (t) { box.appendChild(txRow(t, false, 'in')); });
+    });
+  }
+  // カテゴリの内訳: その月・そのカテゴリの品目を一品ずつ
+  function renderCat() {
+    if (!S.cat || !S.data) return;
+    var box = $('catItems'); box.textContent = '';
+    var rows = S.data.tx.filter(function (t) { return t.category === S.cat; }).sort(byDateDesc), sum = 0;
+    rows.forEach(function (t) { sum += txVal(t, S.cur); box.appendChild(txRow(t, true)); });
+    $('catTitle').textContent = S.cat + '（' + rows.length + '件）'; $('catSum').textContent = fmt(sum, S.cur);
+    if (!rows.length) box.appendChild(el('div', 'empty', 'この月の明細はまだありません'));
+  }
+
+  function fillCats() {
+    var sel = $('fCat'), cur = sel.value; sel.textContent = '';
+    var names = S.data.budgets.map(function (b) { return b.category; });
+    if (cur && names.indexOf(cur) === -1) names.push(cur);
+    names.forEach(function (n) { var o = el('option', '', n); o.value = n; sel.appendChild(o); });
+    if (cur) sel.value = cur;
+  }
+
+  function renderBudget() {
+    var box = $('brows'); box.textContent = ''; delete box.dataset.dirty;
+    S.budgetBase = S.data.budgets; // 保存時に「読み込んだ後に相手が変えていないか」を照合する元
+    S.data.budgets.forEach(function (b) { addBudgetRow(b.category, b.budget); });
+    sumBudget();
+  }
+  function addBudgetRow(name, val) {
+    var r = el('div', 'brow'), n = el('input'), v = el('input'), x = el('button', '', '✕');
+    n.type = 'text'; n.value = name || ''; n.placeholder = 'カテゴリ名'; n.maxLength = 50; n.setAttribute('aria-label', 'カテゴリ名');
+    v.type = 'text'; v.inputMode = 'numeric'; v.value = val ? Math.round(val).toLocaleString('ja-JP') : ''; v.placeholder = '0'; v.setAttribute('aria-label', '月予算（ドン）'); v.style.textAlign = 'right';
+    x.setAttribute('aria-label', 'このカテゴリを消す');
+    var dirty = function () { $('brows').dataset.dirty = '1'; sumBudget(); };
+    n.addEventListener('input', dirty);
+    v.addEventListener('input', function (ev) { groupDigits(v, ev); dirty(); });
+    x.addEventListener('click', function () { r.remove(); dirty(); });
+    r.appendChild(n); r.appendChild(v); r.appendChild(x); $('brows').appendChild(r);
+  }
+  // 予算欄を読む。数字として読めない欄があれば bad にカテゴリ名を入れる
+  function readBudget() {
+    var bad = null;
+    var list = Array.prototype.map.call($('brows').children, function (r) {
+      var i = r.getElementsByTagName('input'), name = i[0].value.trim(), n = parseAmount(i[1].value);
+      if (name && n !== null && isNaN(n) && !bad) bad = name;
+      return { category: name, budget: n === null || isNaN(n) ? 0 : n };
+    }).filter(function (b) { return b.category; });
+    return { list: list, bad: bad };
+  }
+  function sumBudget() {
+    var t = readBudget().list.reduce(function (a, b) { return a + b.budget; }, 0);
+    $('bTotal').textContent = fmt(t, 'VND') + '（≈ ' + fmt(t / S.data.rate, 'JPY') + '）';
+  }
+
+  // ---------- 画面切り替え ----------
+  function show(v) {
+    S.view = v;
+    ['home', 'cat', 'add', 'list', 'budget'].forEach(function (k) { $('v-' + k).hidden = k !== v; });
+    var tab = v === 'cat' ? 'home' : v; // 内訳はホームの続きの画面
+    Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) { b.className = b.dataset.v === tab ? 'on' : ''; });
+    if (v === 'budget' && S.data && !$('brows').dataset.dirty) renderBudget(); // 入力途中の予算は描き直さない
+    if (v === 'add' && !S.editId && !S.dateTouched && !S.scanning && S.data) $('fDate').value = S.data.today;
+    if (v === 'add' && !S.editId && !S.scanning) showImport();
+    window.scrollTo(0, 0);
+  }
+
+  // ---------- 登録・編集 ----------
+  function clearDelConfirm() { clearTimeout(clearDelConfirm.t); $('del').dataset.sure = ''; $('del').textContent = 'この明細を削除'; }
+  function resetForm() {
+    clearDelConfirm();
+    S.editId = null; S.touched = false; S.dateTouched = false; S.lowOk = null;
+    $('fAmount').value = ''; $('fMemo').value = ''; $('fItem').value = ''; $('fCur').value = 'VND';
+    $('fDate').value = S.data ? S.data.today : '';
+    $('preview').style.display = 'none'; $('aiState').textContent = ''; $('importResult').textContent = '';
+    $('formTitle').textContent = '支出を登録'; $('editBtns').hidden = true; $('photoBtns').hidden = false;
+    $('save').textContent = '保存する';
+    renderJobs();
+  }
+  function startEdit(t) {
+    // 写真を送っている間に明細を開くと、送った結果が見えなくなるので開かせない（送るのは数秒〜十数秒で終わる）
+    if (S.scanning) return toast('写真を送っています。終わってから開いてください');
+    if (S.busy) return; // 保存・削除の途中は別の明細を開かない
+    S.back = S.view === 'cat' ? 'cat' : 'list'; // 直した後は元の画面に戻す
+    resetForm(); S.editId = t.id; $('fItem').value = t.item || '';
+    $('fDate').value = t.date; $('fAmount').value = Math.round(t.amount).toLocaleString('ja-JP'); $('fCur').value = t.currency; $('fMemo').value = t.memo;
+    fillCats();
+    if (!Array.prototype.some.call($('fCat').options, function (o) { return o.value === t.category; })) { var o = el('option', '', t.category); o.value = t.category; $('fCat').appendChild(o); }
+    $('fCat').value = t.category;
+    $('formTitle').textContent = '明細を修正'; $('editBtns').hidden = false; $('photoBtns').hidden = true; $('save').textContent = '修正を保存する';
+    renderJobs();
+    show('add');
+  }
+  function setBusy(b) { S.busy = b; ['save', 'del', 'shoot', 'pick', 'saveBudget'].forEach(function (id) { $(id).disabled = b; }); }
+
+  function save() {
+    if (S.busy) return;
+    var amount = parseAmount($('fAmount').value), cur = $('fCur').value;
+    if (amount === null || isNaN(amount) || amount <= 0) return toast('金額を確認してください（例: 1,250,000）');
+    if (!$('fDate').value) return toast('日付を入力してください');
+    // 追加画面を開いたまま日付をまたいだとき、触っていない日付は今日に直してから確かめてもらう
+    if (!S.editId && !S.dateTouched) {
+      var now = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh' }).format(new Date());
+      if (/^\d{4}-\d{2}-\d{2}$/.test(now) && $('fDate').value !== now) { $('fDate').value = now; return toast('日付が変わっていたので今日（' + now + '）に直しました。よければ、もう一度「保存」を押してください'); }
+    }
+    // ドンで1,000未満は桁の打ち間違い・読み違いが多いので、一度だけ確かめる
+    var lowKey = cur + ':' + amount;
+    if (cur === 'VND' && amount < 1000 && S.lowOk !== lowKey) { S.lowOk = lowKey; return toast('₫' + amount + ' はかなり小さい金額です。合っていれば、もう一度「保存」を押してください'); }
+    var e = { id: S.editId, date: $('fDate').value, amount: amount, currency: cur, category: $('fCat').value, memo: $('fMemo').value.trim(), item: $('fItem').value.trim() };
+    var wasEdit = !!S.editId;
+    setBusy(true);
+    call('saveExpense', e).then(function () {
+      toast(wasEdit ? '修正しました' : '保存しました');
+      var m = e.date.slice(0, 7);
+      S.follow = !!S.data && m === S.data.today.slice(0, 7); S.month = m;
+      if (!wasEdit) S.imp = null; // 手入力で新しく登録したら前の取り込み結果は片付ける（修正の保存では残す）
+      setBusy(false); resetForm(); show(wasEdit ? S.back : 'home'); return load(false, m);
+    }).catch(function (err) { setBusy(false); toast(errMsg(err)); });
+  }
+  function del() {
+    if (S.busy || !S.editId) return;
+    var id = S.editId;
+    if ($('del').dataset.sure !== id) { // 確認は「いま開いている明細」にだけ効く
+      clearDelConfirm(); $('del').dataset.sure = id; $('del').textContent = 'もう一度押すと削除します';
+      clearDelConfirm.t = setTimeout(clearDelConfirm, 4000); return;
+    }
+    setBusy(true);
+    call('deleteExpense', id).then(function () { S.pending = S.pending.filter(function (o) { return o.id !== id; }); keepPending(); toast('削除しました'); setBusy(false); resetForm(); show(S.back); return load(); })
+      .catch(function (err) { setBusy(false); clearDelConfirm(); toast(errMsg(err)); });
+  }
+
+  // ---------- レシート読み取り ----------
+  function shrink(file) { // 長辺2200pxのJPEGに縮めて送る（1枚に複数のレシートが写っていても字が潰れない大きさ）
+    return new Promise(function (res, rej) {
+      var img = new Image(), url = URL.createObjectURL(file);
+      img.onload = function () {
+        var k = Math.min(1, 2200 / Math.max(img.width, img.height)), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.82));
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('画像を読み込めませんでした')); };
+      img.src = url;
+    });
+  }
+  // ---------- 写真を送っている間の進み具合（どの画面にいても上に出す） ----------
+  function progShow(done, total) {
+    $('prog').hidden = false;
+    $('progText').textContent = '写真を送っています ' + (done + 1) + '/' + total;
+    $('progBar').style.width = Math.round(100 * done / total) + '%';
+    $('progSub').textContent = '送り終わるまで、このままお待ちください（読み取りは送ったあと裏で進みます）';
+  }
+  function progEnd() { $('prog').hidden = true; }
+  function newId() { // 写真ごとの合言葉（サーバーはこれで、送り直しによる二重の受け付けを防ぐ）
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, function () { return Math.floor(Math.random() * 16).toString(16); });
+  }
+  // S.imp: 直近に写真を送った結果（追加画面に戻ったときも見られるよう、入力フォームとは別に持つ）
+  // S.pending: 版9までの画面が送って、登録できたか分からないまま残した明細。同じ id で送り直せば二重に入らないので、画面を閉じても残す
+  function sendOf(list) { return list.map(function (o) { return { id: o.id, date: o.date, amount: o.amount, currency: o.currency, category: o.category, memo: o.memo, item: o.item || '', receipt: o.receipt || '' }; }); }
+  function keepPending() { try { localStorage.setItem('pendingImport', JSON.stringify(S.pending)); } catch (e) {} }
+  try { var kept = JSON.parse(localStorage.getItem('pendingImport') || '[]'); if (Array.isArray(kept)) S.pending = kept.filter(function (o) { return o && o.id && o.amount; }); } catch (e) {}
+  function confirmPending(tx) { // 読み込んだ一覧に載っていれば登録済みと分かるので、未確認から外す（外さないと、削除した後の送り直しで復活する）
+    if (!S.pending.length || S.scanning) return;
+    var ids = {}; (tx || []).forEach(function (t) { ids[t.id] = true; });
+    var done = S.pending.filter(function (o) { return ids[o.id]; });
+    if (!done.length) return;
+    S.pending = S.pending.filter(function (o) { return !ids[o.id]; }); keepPending();
+    if (!S.imp) S.imp = { saved: [], notes: [], stopped: false, left: 0 };
+    S.imp.saved = S.imp.saved.concat(done);
+    if (S.view === 'add' && !S.editId) showImport();
+  }
+  function fixedErr(err) { return /\[設定\]|権限|為替レート|不正|までです|件あります/.test(String((err && err.message) || err)); } // 送り直しても変わらない失敗
+  // 写真を1枚ずつ縮めて送る。待つのは画像の保存（queueReceipt）だけで、読み取り（processReceipt）は返事を待たずに頼む
+  function onPhoto(ev) {
+    var files = Array.prototype.slice.call(ev.target.files || []); ev.target.value = '';
+    if (!files.length || S.busy || S.editId) return;
+    S.scanning = true; S.imp = null; setBusy(true);
+    $('preview').style.display = 'none'; $('importResult').textContent = '';
+    var total = files.length, i = 0, sent = 0, notes = [], halted = false;
+    function step() {
+      if (halted || i >= total) return Promise.resolve();
+      var name = total > 1 ? (i + 1) + '枚目' : '写真', key = newId();
+      progShow(i, total); $('aiState').textContent = '写真を送っています ' + (i + 1) + '/' + total;
+      return shrink(files[i]).then(function (dataUrl) {
+        var b64 = dataUrl.split(',')[1];
+        // 通信の不調で結果が分からないときは、同じ合言葉でもう一度だけ送る（サーバーは受け付け済みの写真を二重に受け付けない）
+        return call('queueReceipt', b64, key).catch(function (err) {
+          if (fixedErr(err)) throw err;
+          return call('queueReceipt', b64, key);
+        });
+      }).then(function (id) {
+        sent++; S.seen[id] = '待ち'; kick(id);
+      }, function (err) {
+        notes.push(name + ': ' + errMsg(err));
+        if (/\[設定\]|権限|件あります/.test(String((err && err.message) || err))) halted = true; // 残りの写真でも同じ結果になるので止める
+      }).then(function () { i++; return step(); });
+    }
+    step().then(function () {
+      var left = halted ? total - i : 0, bad = total - sent;
+      progEnd(); S.scanning = false; setBusy(false);
+      S.imp = { saved: [], notes: notes, stopped: false, left: left,
+        msg: (sent ? sent + '枚を受け付けました。読み取りは裏で進みます。画面を閉じても大丈夫です。' : '写真を送れませんでした。') + (sent && bad ? '（' + bad + '枚は送れませんでした）' : '') };
+      if (!S.editId) showImport();
+      return refresh();
+    });
+  }
+
+  // ---------- 取り込みの状況（読み取りはサーバーが裏で進める） ----------
+  // poll: 読み直しの間隔 / wait・stale: この秒数たっても進んでいない「待ち」「処理中・登録中」は processReceipt を呼び直す / kick: 同じ画像を呼び直す最短の間隔
+  var JOB_T = { poll: 8000, wait: 20, stale: 420, kick: 60000 };
+  if (isMock) window.__jobT = JOB_T; // 画面テスト用
+  function jobActive(j) { return j.status === '待ち' || j.status === '処理中' || j.status === '登録中'; }
+  function typing() { var a = document.activeElement; return !!a && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName); }
+  // 入力中・入力画面では入力欄に触らない読み直しにする
+  function refresh() { return load(true, null, S.view === 'add' || S.view === 'budget' || typing()); }
+  function kick(id) { // 読み取りを頼む。返事は待たない（サーバーの実行は画面を閉じても最後まで走る。同じ画像に重ねて呼んでもサーバーが二重に進めない）
+    S.kicked[id] = Date.now();
+    call('processReceipt', id).then(function () { if (!document.hidden && !S.busy) refresh(); }, function () {});
+  }
+  function jobsArrived(jobs) { // 読み直しのたびに: 済んだ分を知らせ、止まっている分を進め直す
+    var done = 0, added = 0, failed = 0, now = Date.now();
+    jobs.forEach(function (j) {
+      var was = S.seen[j.id];
+      if (j.mine && (was === '待ち' || was === '処理中' || was === '登録中')) {
+        if (j.status === '済み') { done++; added += j.count; } else if (j.status === '失敗') failed++;
+      }
+      S.seen[j.id] = j.status;
+      var stuck = (j.status === '待ち' && j.waited >= JOB_T.wait) || ((j.status === '処理中' || j.status === '登録中') && j.waited >= JOB_T.stale);
+      if (j.mine && stuck && !(now - (S.kicked[j.id] || 0) < JOB_T.kick)) kick(j.id);
+    });
+    var msg = done ? (added ? added + '件を登録しました' : '読み取りが終わりました（登録できた明細はありません）') : '';
+    if (failed) msg += (msg ? '。' : '') + '読み取れなかった写真があります（「追加」画面で確かめられます）';
+    if (msg) toast(msg);
+  }
+  function retry(id) { // 失敗した写真をもう一度読み取ってもらう
+    if (S.retrying[id]) return;
+    S.retrying[id] = true; renderJobs();
+    call('retryReceipt', id).then(function (st) {
+      delete S.retrying[id];
+      if (st === '待ち') { S.seen[id] = '待ち'; kick(id); }
+      return refresh();
+    }).catch(function (err) { delete S.retrying[id]; renderJobs(); toast(errMsg(err)); });
+  }
+  function renderJobs() { // 取り込み画面の「取り込みの状況」（新しい順）
+    var jobs = (S.data && S.data.jobs) || [], box = $('jobs'); box.textContent = '';
+    $('jobsCard').hidden = !jobs.length || !!S.editId;
+    jobs.forEach(function (j) {
+      var w = el('div', 'job'), r = el('div', 'row');
+      var label = j.status === '待ち' ? '待っています' : j.status === '済み' ? (j.count ? j.count + '件を登録' : '登録なし') : j.status === '失敗' ? '読み取れませんでした' : '読み取り中';
+      r.appendChild(el('span', 'sub', j.at + (j.by ? '・' + j.by : '')));
+      r.appendChild(el('span', 'pill' + (j.status === '失敗' ? ' warn' : ''), label));
+      w.appendChild(r);
+      if (j.note && j.status !== '登録中') w.appendChild(el('p', 'note', j.note)); // 登録中のメモは登録前の控えなので、済むまで出さない
+      if (j.mine && j.status === '失敗') {
+        var b = el('button', 'btn ghost small', S.retrying[j.id] ? '頼んでいます…' : 'もう一度');
+        b.disabled = !!S.retrying[j.id];
+        b.addEventListener('click', function () { retry(j.id); });
+        w.appendChild(b);
+      }
+      box.appendChild(w);
+    });
+  }
+  function resend() { // 登録できたか分からなかった明細を、同じ id で送り直す
+    if (S.busy || !S.pending.length) return;
+    var list = S.pending.slice(0, 300); // サーバーは一度に300件まで
+    setBusy(true); $('aiState').textContent = list.length + ' 件を送り直しています…';
+    call('saveExpenses', sendOf(list)).then(function () {
+      var mine = list.filter(function (o) { return S.pending.indexOf(o) !== -1; }); // 待っている間に一覧で確認済みになった分は二重に数えない
+      S.pending = S.pending.filter(function (o) { return list.indexOf(o) === -1; }); keepPending();
+      if (!S.imp) S.imp = { saved: [], notes: [], stopped: false, left: 0 };
+      S.imp.saved = S.imp.saved.concat(mine);
+      setBusy(false); if (!S.editId) showImport(); return load(true);
+    }).catch(function (err) {
+      setBusy(false);
+      if (fixedErr(err)) toast(errMsg(err)); else toast('まだ送れませんでした。通信を確かめて、もう一度押してください');
+      if (!S.editId) showImport();
+    });
+  }
+  function showImport() { // 取り込み結果と、未確認の明細を追加画面に出す
+    var box = $('importResult'), r = S.imp; box.textContent = '';
+    if (!r && !S.pending.length) return;
+    $('aiState').textContent = !r ? '' : r.msg != null ? r.msg : (r.stopped ? '読み取りをやめました。' : '') +
+      (r.saved.length ? r.saved.length + ' 品を登録しました。違っていたら「明細」から直せます。' : (S.pending.length ? '登録できたか確認できていないレシートがあります。' : '登録できたレシートはありませんでした。'));
+    // 一品ずつ並べると長くなるので、レシートごとに1行（店名・合計・品数）で出す
+    function lines(list, mark) {
+      var groups = [], at = {};
+      list.forEach(function (o) {
+        var k = o.receipt || ('id:' + o.id);
+        if (!at[k]) { at[k] = { rows: [], sum: 0 }; groups.push(at[k]); }
+        at[k].rows.push(o); at[k].sum += o.amount;
+      });
+      groups.forEach(function (g) {
+        var o = g.rows[0], flags = [], cats = [];
+        g.rows.forEach(function (x) { if (cats.indexOf(x.category) === -1) cats.push(x.category); });
+        if (o.noDate) flags.push('日付は読めず今日にしました');
+        if (o.fixed) flags.push('合計は「渡した額−おつり」で計算し直しました');
+        if (o.rough) flags.push('品目の合計が合わず、品目に分けずに合計で登録しました');
+        if (o.currency === 'JPY') flags.push('円として登録しました（ドンなら「明細」から直してください）');
+        if (o.currency === 'VND' && g.sum < 1000) flags.push('金額が小さいので確かめてください');
+        box.appendChild(el('p', 'note', mark + ' ' + o.date + '　' + (o.memo || '（店名なし）') + '　' + fmt(g.sum, o.currency) + '　' + (g.rows.length > 1 ? g.rows.length + '品・' : '') + cats.join('／') + (flags.length ? '　⚠ ' + flags.join('・') : '')));
+      });
+    }
+    if (r) {
+      lines(r.saved, '✓');
+      r.notes.forEach(function (n) { box.appendChild(el('p', 'note', '⚠ ' + n)); });
+      if (r.left > 0) box.appendChild(el('p', 'note', '⚠ 残り ' + r.left + ' 枚は送っていません'));
+    }
+    if (S.pending.length) {
+      box.appendChild(el('p', 'note', '⚠ 次の ' + S.pending.length + ' 件は、通信の不調で登録できたか確認できていません。同じ画像を選び直さず（二重に入ります）、下のボタンで送り直してください。'));
+      lines(S.pending, '？');
+      var btn = el('button', 'btn ghost', '未確認の ' + S.pending.length + ' 件を送り直す'); btn.disabled = S.busy;
+      btn.addEventListener('click', resend); box.appendChild(btn);
+    }
+  }
+
+  // ---------- イベント ----------
+  $('prev').addEventListener('click', function () { shiftMonth(-1); });
+  $('next').addEventListener('click', function () { shiftMonth(1); });
+  function setCur(c) { S.cur = c; try { localStorage.setItem('cur', c); } catch (e) {} render(); }
+  $('curVND').addEventListener('click', function () { setCur('VND'); });
+  $('curJPY').addEventListener('click', function () { setCur('JPY'); });
+  Array.prototype.forEach.call(document.querySelectorAll('nav button'), function (b) {
+    b.addEventListener('click', function () { if (b.dataset.v === 'add' && S.editId) resetForm(); show(b.dataset.v); });
+  });
+  $('shoot').addEventListener('click', function () { $('fileCam').click(); });
+  $('pick').addEventListener('click', function () { $('filePick').click(); });
+  $('fileCam').addEventListener('change', onPhoto); $('filePick').addEventListener('change', onPhoto);
+  $('jobBanner').addEventListener('click', function () { if (S.editId) resetForm(); show('add'); });
+  $('fAmount').addEventListener('input', function (ev) { S.touched = true; S.lowOk = null; groupDigits($('fAmount'), ev); });
+  $('fDate').addEventListener('input', function () { S.touched = true; S.dateTouched = true; });
+  ['fCur', 'fCat', 'fMemo', 'fItem'].forEach(function (id) { $(id).addEventListener('input', function () { S.touched = true; }); });
+  $('save').addEventListener('click', save); $('del').addEventListener('click', del);
+  $('cancel').addEventListener('click', function () { resetForm(); show(S.back); });
+  $('catBack').addEventListener('click', function () { show('home'); });
+  $('addCat').addEventListener('click', function () { addBudgetRow('', 0); $('brows').dataset.dirty = '1'; });
+  $('saveBudget').addEventListener('click', function () {
+    if (S.busy) return;
+    var b = readBudget();
+    if (b.bad) return toast('「' + b.bad + '」の予算を確認してください（例: 8,000,000）');
+    var sent = JSON.stringify(b.list);
+    setBusy(true);
+    call('saveBudgets', b.list, S.budgetBase).then(function () {
+      setBusy(false);
+      if (JSON.stringify(readBudget().list) !== sent) { // 保存の途中で入力が変わっていたら、消さずに残す
+        S.budgetBase = b.list;
+        return toast('保存しました。保存中に変えた分はまだ入っていないので、もう一度「予算を保存する」を押してください');
+      }
+      toast('予算を保存しました'); delete $('brows').dataset.dirty; return load();
+    }).catch(function (err) {
+      setBusy(false);
+      if (/\[更新あり\]/.test(String((err && err.message) || err))) {
+        delete $('brows').dataset.dirty;
+        load().then(function () { if (S.view === 'budget') renderBudget(); });
+        return toast('相手が予算を変更していたので、最新の内容を読み込み直しました。もう一度入力してください');
+      }
+      toast(errMsg(err));
+    });
+  });
+
+  // 相手の登録を拾う: 画面に戻ったときと60秒ごとに再読み込み（入力中の画面は書き換えない）
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && !S.busy) load(true); });
+  setInterval(function () { if (!document.hidden && !S.busy && (S.view === 'home' || S.view === 'list' || S.view === 'cat')) load(true); }, 60000);
+  // 読み取りが進んでいる間（待ち・処理中・登録中がある間）は、画面が見えていれば8秒おきに読み直す
+  (function tick() {
+    setTimeout(function () {
+      if (S.data && (S.data.jobs || []).some(jobActive) && !document.hidden && !S.busy) refresh();
+      tick();
+    }, JOB_T.poll);
+  })();
+
+  // 初期化で取り込み結果・未確認の案内まで消さない（前回の送信中に画面を閉じた分を、選び直さず送り直してもらうため）
+  load().then(function () { if (S.data) { resetForm(); if (S.view === 'add') showImport(); } });
 })();
 </script>
 </body>
