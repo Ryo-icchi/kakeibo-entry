@@ -45,7 +45,8 @@
     <p><a id="skip" href="#" style="color:#d9fb63">追加せずに家計簿を開く</a></p>
   </div>
   <div id="done" hidden>
-    <p>設定が終わりました。このタブは閉じて、ホーム画面のアイコンから開いてください。</p>
+    <p>設定が終わりました。次からはホーム画面のアイコンで家計簿が開きます。</p>
+    <a class="btn" id="openNow" href="#">家計簿を開く</a>
   </div>
 </main>
 <script>
@@ -78,6 +79,15 @@
   if (!open) { set('added', ''); location.replace(launchUrl(dest)); return; } // 設定用で開いたら、追加の案内からやり直す（家計簿へは移動しない）
   // ホーム画面から開いたとき: Web アプリとして開いた場合（standalone）か、追加が済んだ端末なら移動する
   if (navigator.standalone === true || get('added') === '1') { location.replace(dest); return; }
+  // ホーム画面のアイコンを押すと、Safari が読み込み直さずにこのタブを前に出すだけのことがある。
+  // 追加が済んだあとでこのタブが再び表示されたら、そこで家計簿へ移動する
+  var away = false;
+  var back = function () { if (get('added') === '1') location.replace(dest); };
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') away = true; else if (away) back();
+  });
+  window.addEventListener('pageshow', function (e) { if (e.persisted) back(); });
+  $('openNow').href = dest;
   $('guide').hidden = false;
   $('skip').href = dest;
   $('added').addEventListener('click', function () { set('added', '1'); $('guide').hidden = true; $('done').hidden = false; });
