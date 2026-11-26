@@ -457,10 +457,10 @@
     $('jobBanner').hidden = !running && !failed;
     $('jobBannerRun').textContent = running ? 'レシートを読み取り中（' + running + '枚）' : '';
     $('jobBannerFail').textContent = failed ? '読み取れなかった写真があります' : '';
-    // 差額が出たレシート（品目の合計がレシートの合計と合わず、推定の金額で登録したもの）の注意。答え合わせが済むと消える
+    // 差額が出たレシート（品目の合計がレシートの合計と合わず、推定の金額で登録したもの）の注意。夫の検証が済むと消える
     var off = Number(d.off) || 0;
     $('offCard').hidden = !off;
-    $('offNote').textContent = off ? '⚠ 差額が出たレシート: ' + off + '枚（合計はレシートどおり、品目の金額は推定で登録しています。答え合わせが済むと消えます）' : '';
+    $('offNote').textContent = off ? '⚠ 差額が出たレシート: ' + off + '枚（合計はレシートどおり、品目の金額は推定で登録しています。夫に検証を依頼してください）' : '';
   }
 
   function byDateDesc(a, b) { return a.date < b.date ? 1 : a.date > b.date ? -1 : 0; }
